@@ -1,8 +1,5 @@
 #include "PID.h"
-
-/**
- * TODO: Complete the PID class. You may add any additional desired functions.
- */
+#include <cmath>
 
 PID::PID() {}
 
@@ -34,5 +31,5 @@ double PID::TotalError() {
   /**
    * Calculate and return the total error
    */
-  return Kp * p_error + Ki * i_error + Kd * d_error;
+  return -Kp * p_error - Ki * i_error - Kd * d_error;;
 }
