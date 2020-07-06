@@ -1,7 +1,33 @@
-# CarND-Controls-PID
-Self-Driving Car Engineer Nanodegree Program
-
+# PID Controller
 ---
+
+## Project Overview
+Control in a self driving car is how we use the steering, throttle, and brakes to move a car where it needs to go. The following project is a C++ implementation of a PID controller to maneuver a vehicle around a simulated racetrack. 
+
+The simulator provies the cross track error (CTE), which is a measure of how far the vehicle is from the center of the lane. The PID controller is responsible for getting the vehicle to the center of the lane as quickly as possible with minimal overshoot and steady state error. 
+
+THe simulator also provies the vehicle velocity in miles per hour (MPH). A second speed controller was implemented to allow the car to reach the desired speed of 30 MPH quickly and without overshoot. 
+
+The steering controller was given throttle limits which were used to saturate the controller and the steering controller was given steering angle limits to saturate the controller. Both of these bounds were set to model a realistic car. 
+
+The following GIF shows the angle and speed controller both working on the simulated self driving car as it successfully travels around the track.
+
+![](./images/runExample.gif)
+
+## Hyperparameter Tuning
+
+The following control block diagram was used when modeling the PID controller in C++. The control block diagram explains how the output from the system is related to the set input and the error siganl. In this system the output was the vehicle behavior - steering angle or speed. The setpoint was the desired behavior - middle of road or 30 MPH). The process was the dynamics of the car, which are modeled in the simulation. 
+
+![](./images/pid.png)
+
+
+The proportional gain was needed to reduce the error in the signal at a faster rate. Proportional gain can be thought of as how hard you push the controller to get the system to the desired state. Directly increasing the proportional gain decreases the rise time of the system at the cost of increasing the potentail overshoot. In both the steering controller and speed controller increasing the proportional gain was needed to increase the system response, which was expected.
+
+The integral gain was needed to reduce the steady state error in the system. The integral gain needed to be extremely small in this system since little steady state error was seen while driving. 
+
+The derivative gain was needed to reduce the overshoot in the system. Adding derivative gain helps improve the stability of the system and decreases the overshoot - at the cost of potentailly decreasing the rise time. Derivative gain was needed in the system to stop the car from missing the center and continually oscilating back and forth. In some cases, it was seen that without derivative gain, the steering would be unstable. 
+
+The final hyperparameters were set using the twiddle method. In the twiddle method the P,I,D parameters are increased and decreased seperately and the overall effects these increases and decreases have are scaled until a local optimum of parameters are found. The twiddle method was run for the speed controller and the steering controller. It was found that some additonal tuning of the starting twiddle parameters could help the controller perform a better estimate. For example, the change in the integral tuning from twiddle needed to be scaled down signifigantly since little steady state error occured in the system, which is most likely due to the simulation. 
 
 ## Dependencies
 
@@ -28,71 +54,13 @@ Self-Driving Car Engineer Nanodegree Program
 
 Fellow students have put together a guide to Windows set-up for the project [here](https://s3-us-west-1.amazonaws.com/udacity-selfdrivingcar/files/Kidnapped_Vehicle_Windows_Setup.pdf) if the environment you have set up for the Sensor Fusion projects does not work for this project. There's also an experimental patch for windows in this [PR](https://github.com/udacity/CarND-PID-Control-Project/pull/3).
 
-## Basic Build Instructions
+## Running the Code
+Download the simulator and open it. In the main menu screen select Project 4: PID Controller. The simulator can be downloaded [here](https://github.com/udacity/self-driving-car-sim/releases)
 
 1. Clone this repo.
 2. Make a build directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
 4. Run it: `./pid`. 
 
-Tips for setting up your environment can be found [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
-
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/e8235395-22dd-4b87-88e0-d108c5e5bbf4/concepts/6a4d8d42-6a04-4aa6-b284-1697c0fd6562)
-for instructions and the project rubric.
-
-## Hints!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+Run the simulator to see how the car travels around the track.
 

@@ -47,7 +47,7 @@ int main() {
   PID pid;
   pid.Init(0.15, 0.0, 2.5); //tuned twittle parameters + manual tuning
   PID speed_pid;
-  speed_pid.Init(1.99,0.00006,1); //tuned twittle parameters
+  speed_pid.Init(2,0.00005,1); //tuned twittle parameters
 
   Twiddle twid;
   twid.Init(0, 0, 0);
