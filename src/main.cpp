@@ -9,6 +9,8 @@
 // for convenience
 using nlohmann::json;
 using std::string;
+using std::cout;
+using std::endl;
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
@@ -44,12 +46,12 @@ int main() {
   
   PID pid;
   //pid.Init(0.15, 0.0, 2.5); //tuned twittle parameters
-  pid.Init(0.0, 0.0, 0.0); //tuned twittle parameters
+  pid.Init(.1, 0.0, 0.0); //tuned twittle parameters
   PID speed_pid;
-  speed_pid.Init(0.1,0.001,0.1); //tuned twittle parameters
+  speed_pid.Init(0.5,0.1,2); //tuned twittle parameters
 
   Twiddle twid;
-  twid.Init(0.0, 0.0, 0.0);
+  twid.Init(0.1, 0.0, 0.0);
   int twiddle_steps = 500; //enough steps to determine error from twiddle tuning
   int num_iter = 0; //main loop counter
   int twid_tol = .01; //tolerance to tune twiddle params against
@@ -79,30 +81,40 @@ int main() {
           double throttle;
           num_iter++;
 
-          pid.UpdateError(cte);
-          steer_value = pid.TotalError();
-          //limiting steering angles to [-1 1] per mechanics of system
-          steer_value = fminf(1.0, steer_value);
-          steer_value = fmaxf(-1.0, steer_value);
+          //remove cte before connected
+          if (num_iter > 2) {
 
-          speed_pid.UpdateError(speed - target_speed);
-          throttle = speed_pid.TotalError();
-          //limiting throttle values to [-.7 .7]
-          throttle = fminf(0.7, throttle);
-          throttle = fmaxf(-0.7, throttle);
+            pid.UpdateError(cte);
+            steer_value = pid.TotalError();
+            //limiting steering angles to [-1 1] per mechanics of system
+            steer_value = fminf(1.0, steer_value);
+            steer_value = fmaxf(-1.0, steer_value);
+            pid.SquareError(); //finding total square error
 
-          if (twiddle) //parameter tuning
-          {
+            speed_pid.UpdateError(speed - target_speed);
+            throttle = speed_pid.TotalError();
+            //limiting throttle values to [-.7 .7]
+            throttle = fminf(0.7, throttle);
+            throttle = fmaxf(-0.7, throttle);
+            
             //tune twiddle params after specified number of steps and reset simulator
-            if (pid.steps > twiddle_steps) 
+            if ((pid.steps > twiddle_steps || fabs(cte) > 3 ) & twiddle) //parameter tuning
             {
               twid.avg_err = pid.total_err / pid.steps;
-              twid.cur_err = twid.avg_err;
+              //assign large error if the car out of road
+              if (fabs(cte) > 3) twid.cur_err = twid.avg_err + 100.0;
+              else twid.cur_err = twid.avg_err;
+              
               if (twid.cur_err < twid_tol) twiddle = false; //end if performance is good
+              
               twid.Update(); //update pid params using twiddle
               //Debug
-              std::cout << "PID params: " << twid.best_params.p[0] << "\t" << twid.best_params.p[1] << "\t" << twid.best_params.p[2] << std::endl;
-              std::cout << "Twiddle Error : " << twid.best_err << "\tcurrent idx: " << twid.idx << std::endl;
+              cout << "kp: " << twid.p[0] << "\tki: " << twid.p[1] << "\tkd: " << twid.p[2] << endl;
+              cout << "dkp: " << twid.dp[0] << "\tdki: " << twid.dp[1] << "\tdkd: " << twid.dp[2] << endl;
+              cout << "Best PID params: " << twid.best_params.p[0] << "\t" << twid.best_params.p[1] << "\t" << twid.best_params.p[2] << endl;
+              cout << "Best dp params: " << twid.best_params.dp[0] << "\t" << twid.best_params.dp[1] << "\t" << twid.best_params.dp[2] << endl;
+              cout << "Best err: " << twid.best_err << "\tcurrent err: " << twid.cur_err << "\tcurrent idx: " << twid.idx << endl;
+              cout << "--------------------" << endl;
               //initialize pid with new params
               pid.Init(twid.p[0], twid.p[1], twid.p[2]);
               reset_simulator(ws); //reset simulator
@@ -113,7 +125,7 @@ int main() {
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = throttle;
+          msgJson["throttle"] = .3;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);

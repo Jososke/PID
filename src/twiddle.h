@@ -2,6 +2,7 @@
 #define TWIDDLE_H
 
 #include <vector>
+#include <float.h> //DBL_MAX
 
 //struct for storing best params
 struct params{
@@ -33,10 +34,14 @@ class Twiddle {
   void Update();
 
   std::vector<double> p, dp;
-  int num_params, idx;
-  double best_err, avg_err, cur_err;
-  bool flag_fw, is_initialized;
   params best_params;
+
+  bool flag_fw = false;
+  double best_err = DBL_MAX;
+  double cur_err = 0;
+  double avg_err = 0;
+  int idx = 0;
+  bool is_initialized = false;
 };
 
 #endif  // TWIDDLE_H
