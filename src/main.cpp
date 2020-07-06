@@ -42,16 +42,15 @@ string hasData(string s) {
 int main() {
   uWS::Hub h;
 
-  bool twiddle = true; //set here to turn on parameter tuning with twiddle - params will be displayed in cout
+  bool twiddle = false; //set here to turn on parameter tuning with twiddle - params will be displayed in cout
   
   PID pid;
-  //pid.Init(0.15, 0.0, 2.5); //tuned twittle parameters
-  pid.Init(.1, 0.0, 0.0); //tuned twittle parameters
+  pid.Init(0.15, 0.0, 2.5); //tuned twittle parameters + manual tuning
   PID speed_pid;
-  speed_pid.Init(0.5,0.1,2); //tuned twittle parameters
+  speed_pid.Init(1.99,0.00006,1); //tuned twittle parameters
 
   Twiddle twid;
-  twid.Init(0.1, 0.0, 0.0);
+  twid.Init(0, 0, 0);
   int twiddle_steps = 500; //enough steps to determine error from twiddle tuning
   int num_iter = 0; //main loop counter
   int twid_tol = .01; //tolerance to tune twiddle params against
@@ -81,51 +80,46 @@ int main() {
           double throttle;
           num_iter++;
 
-          //remove cte before connected
-          if (num_iter > 2) {
+          /* Updating steering controller */
+          pid.UpdateError(cte);
+          steer_value = pid.TotalError();
+          //limiting steering angles to [-1 1] per mechanics of system
+          steer_value = fminf(1.0, steer_value);
+          steer_value = fmaxf(-1.0, steer_value);
+          pid.SquareError(); //finding total square error
 
-            pid.UpdateError(cte);
-            steer_value = pid.TotalError();
-            //limiting steering angles to [-1 1] per mechanics of system
-            steer_value = fminf(1.0, steer_value);
-            steer_value = fmaxf(-1.0, steer_value);
-            pid.SquareError(); //finding total square error
+          /* Updating speed controller */
+          speed_pid.UpdateError(speed - target_speed);
+          throttle = speed_pid.TotalError();
+          //limiting throttle values to [-.7 .7]
+          throttle = fminf(0.5, throttle);
+          throttle = fmaxf(-0.5, throttle);
+          speed_pid.SquareError(); //finding total square error
 
-            speed_pid.UpdateError(speed - target_speed);
-            throttle = speed_pid.TotalError();
-            //limiting throttle values to [-.7 .7]
-            throttle = fminf(0.7, throttle);
-            throttle = fmaxf(-0.7, throttle);
+          /* Tuning twiddle if turned on */
+          if ((speed_pid.steps > twiddle_steps || fabs(cte) > 3 ) & twiddle) //parameter tuning
+          {
+            twid.avg_err = speed_pid.total_err / speed_pid.steps;
+            if (fabs(cte) > 3) twid.cur_err = twid.avg_err + 1000.0; //biasing twiddle major error
+            else twid.cur_err = twid.avg_err;
             
-            //tune twiddle params after specified number of steps and reset simulator
-            if ((pid.steps > twiddle_steps || fabs(cte) > 3 ) & twiddle) //parameter tuning
-            {
-              twid.avg_err = pid.total_err / pid.steps;
-              //assign large error if the car out of road
-              if (fabs(cte) > 3) twid.cur_err = twid.avg_err + 100.0;
-              else twid.cur_err = twid.avg_err;
-              
-              if (twid.cur_err < twid_tol) twiddle = false; //end if performance is good
-              
-              twid.Update(); //update pid params using twiddle
-              //Debug
-              cout << "kp: " << twid.p[0] << "\tki: " << twid.p[1] << "\tkd: " << twid.p[2] << endl;
-              cout << "dkp: " << twid.dp[0] << "\tdki: " << twid.dp[1] << "\tdkd: " << twid.dp[2] << endl;
-              cout << "Best PID params: " << twid.best_params.p[0] << "\t" << twid.best_params.p[1] << "\t" << twid.best_params.p[2] << endl;
-              cout << "Best dp params: " << twid.best_params.dp[0] << "\t" << twid.best_params.dp[1] << "\t" << twid.best_params.dp[2] << endl;
-              cout << "Best err: " << twid.best_err << "\tcurrent err: " << twid.cur_err << "\tcurrent idx: " << twid.idx << endl;
-              cout << "--------------------" << endl;
-              //initialize pid with new params
-              pid.Init(twid.p[0], twid.p[1], twid.p[2]);
-              reset_simulator(ws); //reset simulator
-              num_iter = 0; //reset loop
-              sleep(0.5); // waiting for reseting sim
-            }
+            if (twid.cur_err < twid_tol) twiddle = false; //end if performance is good
+            
+            twid.Update(); //update pid params using twiddle
+            //Debug
+            cout << "P: " << twid.p[0] << "\tI: " << twid.p[1] << "\tD: " << twid.p[2] << endl;
+            cout << "Best PID params: " << twid.best_params.p[0] << "\t" << twid.best_params.p[1] << "\t" << twid.best_params.p[2] << endl;
+            cout << "Best err: " << twid.best_err << "\tcurrent err: " << twid.cur_err << "\tcurrent idx: " << twid.idx << endl;
+            //initialize pid with new params
+            speed_pid.Init(twid.p[0], twid.p[1], twid.p[2]);
+            reset_simulator(ws); //reset simulator
+            num_iter = 0; //reset loop
+            sleep(0.5); // waiting for reseting sim
           }
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = .3;
+          msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
