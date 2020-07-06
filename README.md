@@ -4,19 +4,19 @@
 ## Project Overview
 Control in a self driving car is how we use the steering, throttle, and brakes to move a car where it needs to go. The following project is a C++ implementation of a PID controller to maneuver a vehicle around a simulated racetrack. 
 
-The simulator provies the cross track error (CTE), which is a measure of how far the vehicle is from the center of the lane. The PID controller is responsible for getting the vehicle to the center of the lane as quickly as possible with minimal overshoot and steady state error. 
+The simulator provides the cross track error (CTE), which is a measure of how far the vehicle is from the center of the lane. The PID controller is responsible for getting the vehicle to the center of the lane as quickly as possible with minimal overshoot and steady state error. 
 
-THe simulator also provies the vehicle velocity in miles per hour (MPH). A second speed controller was implemented to allow the car to reach the desired speed of 30 MPH quickly and without overshoot. 
+The simulator also provides the vehicle velocity in miles per hour (MPH). A second speed controller was implemented to allow the car to reach the desired speed of 30 MPH quickly, and without overshoot. 
 
-The steering controller was given throttle limits which were used to saturate the controller and the steering controller was given steering angle limits to saturate the controller. Both of these bounds were set to model a realistic car. 
+The speed controller was given throttle limits which were used to saturate the controller and the steering controller was given steering angle limits to saturate the controller. Both of these bounds were set to model a realistic car. 
 
-The following GIF shows the angle and speed controller both working on the simulated self driving car as it successfully travels around the track.
+The following GIF shows the angle and speed controllers both working on the simulated self driving car as it successfully travels around the track.
 
 ![](./images/runExample.gif)
 
 ## Hyperparameter Tuning
 
-The following control block diagram was used when modeling the PID controller in C++. The control block diagram explains how the output from the system is related to the set input and the error siganl. In this system the output was the vehicle behavior - steering angle or speed. The setpoint was the desired behavior - middle of road or 30 MPH). The process was the dynamics of the car, which are modeled in the simulation. 
+The following control block diagram was used when modeling the PID controller in C++. The control block diagram explains how the output from the system is related to the set input and the error signal. In this system, the output was the vehicle behavior - steering angle or speed. The setpoint was the desired behavior - middle of road or 30 MPH. The process was the dynamics of the car, which are modeled in the simulation. 
 
 ![](./images/pid.png)
 
@@ -27,7 +27,7 @@ The integral gain was needed to reduce the steady state error in the system. The
 
 The derivative gain was needed to reduce the overshoot in the system. Adding derivative gain helps improve the stability of the system and decreases the overshoot - at the cost of potentailly decreasing the rise time. Derivative gain was needed in the system to stop the car from missing the center and continually oscilating back and forth. In some cases, it was seen that without derivative gain, the steering would be unstable. 
 
-The final hyperparameters were set using the twiddle method. In the twiddle method the P,I,D parameters are increased and decreased seperately and the overall effects these increases and decreases have are scaled until a local optimum of parameters are found. The twiddle method was run for the speed controller and the steering controller. It was found that some additonal tuning of the starting twiddle parameters could help the controller perform a better estimate. For example, the change in the integral tuning from twiddle needed to be scaled down signifigantly since little steady state error occured in the system, which is most likely due to the simulation. 
+The final hyperparameters were set using the twiddle method. In the twiddle method the P, I, D parameters are increased and decreased seperately and the overall effects these increases and decreases have are scaled until a local optimum of parameters are found. The twiddle method was run for the speed controller and the steering controller. It was found that some additonal tuning of the starting twiddle parameters could help the controller perform a better estimate. For example, the change in the integral tuning from twiddle needed to be scaled down signifigantly since little steady state error occured in the system, which is most likely due to the simulation. 
 
 ## Dependencies
 
