@@ -4,6 +4,7 @@
 #include <string>
 #include "json.hpp"
 #include "PID.h"
+#include "twiddle.h"
 
 // for convenience
 using nlohmann::json;
@@ -13,6 +14,12 @@ using std::string;
 constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
+
+// Resetting the Simulator
+void reset_simulator(uWS::WebSocket<uWS::SERVER>& ws) {
+  std::string msg("42[\"reset\",{}]");
+  ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+}
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -33,15 +40,24 @@ string hasData(string s) {
 int main() {
   uWS::Hub h;
 
+  bool twiddle = true; //set here to turn on parameter tuning with twiddle - params will be displayed in cout
+  
   PID pid;
-  pid.Init(0.15, 0.0, 2.5);
-
+  //pid.Init(0.15, 0.0, 2.5); //tuned twittle parameters
+  pid.Init(0.0, 0.0, 0.0); //tuned twittle parameters
   PID speed_pid;
-  speed_pid.Init(0.1,0.001,0.1);
+  speed_pid.Init(0.1,0.001,0.1); //tuned twittle parameters
+
+  Twiddle twid;
+  twid.Init(0.0, 0.0, 0.0);
+  int twiddle_steps = 500; //enough steps to determine error from twiddle tuning
+  int num_iter = 0; //main loop counter
+  int twid_tol = .01; //tolerance to tune twiddle params against
 
   double target_speed = 30; //set target speed here for speed control
 
-  h.onMessage([&pid, &speed_pid, &target_speed](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
+  h.onMessage([&pid, &speed_pid, &twid, &target_speed, &twiddle, &num_iter, &twiddle_steps, &twid_tol]
+              (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, 
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -60,6 +76,8 @@ int main() {
           double speed = std::stod(j[1]["speed"].get<string>());
           double angle = std::stod(j[1]["steering_angle"].get<string>());
           double steer_value;
+          double throttle;
+          num_iter++;
 
           pid.UpdateError(cte);
           steer_value = pid.TotalError();
@@ -68,20 +86,36 @@ int main() {
           steer_value = fmaxf(-1.0, steer_value);
 
           speed_pid.UpdateError(speed - target_speed);
-          double throttle = speed_pid.TotalError();
+          throttle = speed_pid.TotalError();
           //limiting throttle values to [-.7 .7]
           throttle = fminf(0.7, throttle);
           throttle = fmaxf(-0.7, throttle);
 
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value 
-                    << std::endl;
+          if (twiddle) //parameter tuning
+          {
+            //tune twiddle params after specified number of steps and reset simulator
+            if (pid.steps > twiddle_steps) 
+            {
+              twid.avg_err = pid.total_err / pid.steps;
+              twid.cur_err = twid.avg_err;
+              if (twid.cur_err < twid_tol) twiddle = false; //end if performance is good
+              twid.Update(); //update pid params using twiddle
+              //Debug
+              std::cout << "PID params: " << twid.best_params.p[0] << "\t" << twid.best_params.p[1] << "\t" << twid.best_params.p[2] << std::endl;
+              std::cout << "Twiddle Error : " << twid.best_err << "\tcurrent idx: " << twid.idx << std::endl;
+              //initialize pid with new params
+              pid.Init(twid.p[0], twid.p[1], twid.p[2]);
+              reset_simulator(ws); //reset simulator
+              num_iter = 0; //reset loop
+              sleep(0.5); // waiting for reseting sim
+            }
+          }
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }  // end "telemetry" if
       } else {

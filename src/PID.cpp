@@ -16,6 +16,9 @@ void PID::Init(double Kp_, double Ki_, double Kd_) {
   p_error = 0;
   i_error = 0;
   d_error = 0;
+
+  steps = 0;
+  total_err = 0;
 }
 
 void PID::UpdateError(double cte) {
@@ -25,6 +28,7 @@ void PID::UpdateError(double cte) {
   d_error = cte - p_error; //p_error is cte from one timestep before
   p_error = cte;
   i_error += cte;
+  steps++;
 }
 
 double PID::TotalError() {
@@ -32,4 +36,9 @@ double PID::TotalError() {
    * Calculate and return the total error
    */
   return -Kp * p_error - Ki * i_error - Kd * d_error;;
+}
+
+double PID::SquareError() {
+  total_err += pow(p_error,2);
+	return total_err;
 }

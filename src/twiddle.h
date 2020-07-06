@@ -1,51 +1,42 @@
 #ifndef TWIDDLE_H
 #define TWIDDLE_H
 
-vector<int> twiddle(int tol)
-{
-    vector<int> p = [0, 0, 0];
-    vector<int> dp = [1, 1, 1];
-    x_trajectory, y_trajectory, best_err = run(robot, p)
-    it = 0
-    while (sum(dp) > tol)
-    {
-        std::cout << "Iteration " << it << " best error = " << best_err << std::endl;
-        for (int i = 0; i < p.size(); i++)
-        {
-            p[i] += dp[i];
-            
-            robot = make_robot()
-            x_trajectory, y_trajectory, err = run(robot, p)
-            
-            if (err < best_err)
-            {
-                best_err = err;
-                dp[i] *= 1.1;
-            }
-            else
-            {
-                p[i] -= 2*dp[i];
-                
-                robot = make_robot()
-                x_trajectory, y_trajectory, err = run(robot, p)
+#include <vector>
 
-                if (err < best_err)
-                {
-                    best_err = err;
-                    dp[i] *= 1.1;
-                }
-                else
-                {
-                    p[i] += dp[i];
-                    dp[i] *= 0.9;
-                }
-            }
-        }
-        it += 1;
-    }
-    std::cout << "Final params: P = " << p[0] << ", D = " <<
-                    p[1] << ", I = " << p[2] << std::endl;
-    std::cout << "Best error = " << best_err << std::endl;
-    return p;
-}
+//struct for storing best params
+struct params{
+  std::vector<double> p; 
+  std::vector<double> dp;
+};
+
+class Twiddle {
+ public:
+  /**
+   * Constructor
+   */
+  Twiddle();
+
+  /**
+   * Destructor.
+   */
+  virtual ~Twiddle();
+
+  /**
+   * Initialize PID.
+   * @param (Kp_, Ki_, Kd_) The initial PID coefficients
+   */
+  void Init(double Kp_, double Ki_, double Kd_);
+
+  /**
+   * Run one timestep of the twiddle method.
+   */
+  void Update();
+
+  std::vector<double> p, dp;
+  int num_params, idx;
+  double best_err, avg_err, cur_err;
+  bool flag_fw, is_initialized;
+  params best_params;
+};
+
 #endif  // TWIDDLE_H

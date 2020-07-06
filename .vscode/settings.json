@@ -79,6 +79,7 @@
         "vector": "cpp",
         "*.tcc": "cpp",
         "memory_resource": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "__functional_03": "cpp"
     }
 }

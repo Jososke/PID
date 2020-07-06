@@ -31,6 +31,15 @@ class PID {
    */
   double TotalError();
 
+  /**
+   * Calculate the squared PID error.
+   * @output The total squaredPID error
+   */
+  double SquareError();
+
+  int steps;
+  double total_err;
+
  private:
   /**
    * PID Errors
